@@ -1,0 +1,111 @@
+```{r}
+rmarkdown::render("manzi/assone.rmd", "html_document")
+print('hola')
+#install.packages("knitr")
+#install.packages("rmarkdown")
+```
+
+# Part A
+```{r}
+#install.packages('Ryacas')
+library(Ryacas)
+#install.packages('mosaic')
+library(mosaic)
+#install.packages('stats')
+library(stats)
+
+```
+
+## Check whether it is a proper CDF using the limit properties only.
+
+```{r}
+x = ysym("x")
+lim(1 - (1/exp((x^2)/8)), x, +Inf)
+```
+
+## Plot it
+```{r}
+f = makeFun(1 - (1/exp((x^2)/8)) ~ x)
+plotFun( f(x) ~ x, xlim = c(0, 10) )
+
+```
+
+## plot its density for X > 0
+
+```{r}
+f = function(x) (1 - exp(1/exp((x^2)/8)))
+g = function(x) {}
+```
+
+```{r}
+body(g) = D(body(f), 'x')
+curve(g, 0, 10, ylab = "PDF(x)")
+```
+
+
+## compute P(0 < X ≤ 2.3)
+```{r}
+
+```
+
+## compute E(X)
+```{r}
+```
+
+## compute VAR(X)
+```{r}
+```
+
+Hints:  for (i) you might use the Ryacas Rlibrary;  for (ii) you might use themakeFun()function in themosaic Rpackage (for piecewise functions) and thecurve() Rfunction; for(iii) you might use theD()function in the stats library
+
+## compute the median
+```{r}
+```
+
+# Part B
+Consider theCustomerCare.csvdata set on rating about a new product (columnsRatingpriceandRatingquality).  After considering the variableEducationas group variable
+
+## Perform a MANOVA test to determine if there are differences in the mean vectors ofthe ratings in the education level groups
+```{r}
+```
+
+## Perform univariate ANOVA tests on each variable
+```{r}
+```
+
+## Compare and comment on results
+```{r}
+```
+
+Hints: for (i) you might use themanova Rfunction; for (ii) you might use theaov()function
+
+# Part C
+```{r}
+```
+
+Consider theCustomerCare.csvdata set on rating about a new product (columnRatingprice)
+
+## Implement the classical bootstrap to estimate the (95%) confidence intervals of the popu-lation Pearson’s correlation coefficient between rating andAge
+```{r}
+```
+
+
+## Compare with the Fishertransform method
+```{r}
+```
+
+## Compare with the Fishertransform method
+```{r}
+```
+
+## Implement an iterative procedure and a package procedure (for exampleusingboot)
+
+## Plot the confidence intervals to visually compare the results
+
+Let Y be the Rating price and X the Age
+
+## Compute the (95%) boostrap confidence interval for Y/X
+
+## Comment on results.
+
+NOTE: This part is similar to an example given in a previous class and should be intendedas an exercise in which you can freely add extra material on bootstrap. For example, you may extend that example including the use of other bootstrap R packages you may find.
