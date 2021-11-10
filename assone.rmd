@@ -1,54 +1,58 @@
+# Assignment 1 - AMS
+
 ```{r}
-setwd('//wsl.localhost/manzi/home/tosho/manzi')
-setwd('~/manzi')
 rmarkdown::render("assone.rmd", "html_document")
 ```
 
 ```{r}
-install.packages('stats')
+install.packages('DescTools')
+install.packages('GoFKernel')
+install.packages('Ryacas')
+install.packages('boot')
+install.packages('gmodels') 
+install.packages('knitr')
 install.packages('mosaic')
 install.packages('mosaicCalc')
-install.packages('Ryacas')
-install.packages('GoFKernel')
-install.packages("rmarkdown")
-install.packages("knitr")
-install.packages("DescTools")
-install.packages('boot')
-install.packages("gmodels") 
-```
+install.packages('rmarkdown')
+install.packages('stats')
+install.packages('confintr')
 
-# Part A
+```
 
 ```{r}
 library(DescTools)
+library(GoFKernel)
+library(Ryacas)
 library(boot)
 library(gmodels)
-library(Ryacas)
+library(knitr)
 library(mosaic)
-library(stats)
 library(mosaicCalc)
-library(GoFKernel)
+library(rmarkdown)
+library(stats)
+library(confintr)
 
 infinite = 75
 ```
 
-## Check whether it is a proper CDF using the limit properties only.
+## Part A
 
 ```{r}
 F = function(x) (1 - (1/exp((x^2)/8)))
 ```
 
+### Check whether it is a proper CDF using the limit properties only.
+
 ```{r}
 x = ysym("x")
 lim(F(x), x, +Inf)
 ```
-
 ## Plot it
 
 ```{r}
 F_mos = makeFun(F(x) ~ x)
-plotFun( F_mos(x) ~ x, xlim = c(0, 10) )
-
+plotFun( F_mos(x) ~ x, xlim = c(-2, 10) )
+# TODO flaf 2nd part
 ```
 
 ## plot its density for X > 0
@@ -83,8 +87,6 @@ ex2 = MM(infinite) - MM(0)
 ex2 - (mu*mu)
 ```
 
-Hints: for (i) you might use the Ryacas R library; for (ii) you might use the makeFun() function in the mosaic R package (for piecewise functions) and the curve() R function; for(iii) you might use the D()function in the stats library
-
 ## compute the median
 
 ```{r}
@@ -92,14 +94,13 @@ F_inv = inverse(F, lower=0, upper=infinite)
 F_inv(0.5)
 ```
 
-# Part B
-
-Consider theCustomerCare.csvdata set on rating about a new product (columnsRatingpriceandRatingquality). After considering the variable Educationas group variable
+## Part B
 
 ```{r}
 df = read.csv(file = 'CustomerCare.csv')
-
+dt = subset(df , columns=c('Education','Rating_price','Rating_quality'))
 ```
+Consider the CustomerCare.csv dataset on rating about a new product (columns Rating_price and Rating_quality). After considering the variable Education as group variable:
 
 ## Perform a MANOVA test to determine if there are differences in the mean vectors ofthe ratings in the education level groups
 
@@ -118,9 +119,9 @@ df = read.csv(file = 'CustomerCare.csv')
 
 ```
 
-Hints: for (i) you might use themanova Rfunction; for (ii) you might use theaov()function
+Hints: for (i) you might use the manova R function; for (ii) you might use the aov()function
 
-# Part C
+## Part C
 
 ```{r}
 df = read.csv(file = 'CustomerCare.csv')
@@ -137,7 +138,7 @@ Y = df$Rating_price
 ```
 
 ```{r}
-## STEP BY STEP
+## iterative procedure
 
 n_iter = 1000
 corrs = rep(NULL, n_iter)
@@ -148,7 +149,8 @@ for (i in 1:n_iter){
 }
 
 hist(corrs)
-round(ci(corrs, confidence=0.95), 3)
+sbs = round(ci(corrs, confidence=0.95), 3)
+sbs
 ```
 ### The sampling distribution of Pearson\'s r is not normally distributed. Fisher developed a transformation now called "Fisher's z-transformation" that converts Pearson's r to the normally distributed variable z. The formula for the transformation is:
 $$z_r = tanh^{-1}(r) = \frac{1}{2}log\left ( \frac{1+r}{1-r}\right )$$
@@ -164,64 +166,46 @@ results
 ```
 
 ```{r}
-zs = FisherZ(corrs)
-hist(zs)
+tmp1 = ci_cor(X, Y, method = "pearson", type = "normal")
+zs = FisherZ(cor(X,Y))
+zs
+
+tmp2 = ci_cor(X, Y, method = "pearson", type = "bootstrap")
 ```
 
 ```{r}
+
 est = ci(zs, confidence=0.95)
-round(FisherZInv(est), 3)
+pkg = round(FisherZInv(est), 3)
+pkg
 ```
+
+### Plot the confidence intervals to visually compare the results
 
 ```{r}
-corrs = seq(0, 1, 0.1)
+data = data.frame(
+    x = c(1:2),
+    y = c(sbs['Estimate'], pkg['Estimate']),
+    lower = c(sbs['CI lower'], pkg['CI lower']),
+    upper = c(sbs['CI upper'], pkg['CI upper'])
+)
 
-# mumble
-rc = t(sapply(corrs, CorCI, n=N))
-t = corrs*sqrt(N-2)/sqrt(1-corrs^2)
-p = (1-pt(t,N-2))/2
+#install.packages("plotrix")
+library("plotrix")
 
-zresults =  data.frame(r=corrs, z=FisherZ(corrs), lower=rc[,2], upper=rc[,3], t=t, p=p)
-round(zresults, 2)
+plotCI(x = data$x,
+       y = data$y,
+       li = data$lower,
+       ui = data$upper)
 ```
 
-## Plot the confidence intervals to visually compare the results
+### Compute the (95%) boostrap confidence interval for Y/X
 
 ```{r}
-
-
+# TODO
 ```
 
-Let Y be the Rating price and X the Age
-
-## Compute the (95%) boostrap confidence interval for Y/X
-
-```{r}
-
-```
-
-## Comment on results.
-
-```{r}
-
-```
-
-NOTE: This part is similar to an example given in a previous class and should be intended as an exercise in which you can freely add extra material on bootstrap. For example, you may extend that example including the use of other bootstrap R packages you may find.
+### Comment on results.
 
 
-```{r}
-# create a list of all installed packages
- ip <- as.data.frame(installed.packages())
- head(ip)
-# if you use MRO, make sure that no packages in this library will be removed
- ip <- subset(ip, !grepl("MRO", ip$LibPath))
-# we don't want to remove base or recommended packages either\
- ip <- ip[!(ip[,"Priority"] %in% c("base", "recommended")),]
-# determine the library where the packages are installed
- path.lib <- unique(ip$LibPath)
-# create a vector with all the names of the packages you want to remove
- pkgs.to.remove <- ip[,1]
- head(pkgs.to.remove)
-# remove the packages
- sapply(pkgs.to.remove, remove.packages, lib = path.lib)
-```
+NOTE: you may extend that example including the use of other bootstrap R packages you may find.
