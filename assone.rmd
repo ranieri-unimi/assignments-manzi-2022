@@ -1,24 +1,34 @@
 ```{r}
-rmarkdown::render("manzi/assone.rmd", "html_document")
+setwd('//wsl.localhost/manzi/home/tosho/manzi')
+rmarkdown::render("assone.rmd", "html_document")
 ```
 
 ```{r}
-install.packages("knitr")
-install.packages("rmarkdown")
-install.packages('mosaicCalc')
 install.packages('stats')
 install.packages('mosaic')
+install.packages('mosaicCalc')
 install.packages('Ryacas')
 install.packages('GoFKernel')
+install.packages("rmarkdown")
+install.packages("knitr")
+install.packages("DescTools")
+install.packages('boot')
+install.packages("gmodels") 
 ```
 
 # Part A
+
 ```{r}
+library(DescTools)
+library(boot)
+library(gmodels)
 library(Ryacas)
 library(mosaic)
 library(stats)
 library(mosaicCalc)
 library(GoFKernel)
+
+infinite = 75
 ```
 
 ## Check whether it is a proper CDF using the limit properties only.
@@ -33,6 +43,7 @@ lim(F(x), x, +Inf)
 ```
 
 ## Plot it
+
 ```{r}
 F_mos = makeFun(F(x) ~ x)
 plotFun( F_mos(x) ~ x, xlim = c(0, 10) )
@@ -47,13 +58,16 @@ body(f) = D(body(F), 'x')
 curve(f, 0, 10, ylab = "PDF(x)")
 ```
 
-
 ## compute P(0 < X ≤ 2.3)
+
 ```{r}
 F(2.3) - F(0)
 ```
 
 ## compute E(X)
+
+As we know E(X) = INTEGER(1 - CDF(X))
+
 ```{r}
 M = antiD((1-F(x)) ~ x)
 mu = M(+Inf) - M(0)
@@ -64,63 +78,155 @@ mu
 
 ```{r}
 MM = antiD((x*f(x)*(x)) ~ x)
-infinite = 75
 ex2 = MM(infinite) - MM(0)
 ex2 - (mu*mu)
 ```
 
-Hints:  for (i) you might use the Ryacas R library;  for (ii) you might use the makeFun() function in the mosaic R package (for piecewise functions) and the curve() R function; for(iii) you might use the D()function in the stats library
+Hints: for (i) you might use the Ryacas R library; for (ii) you might use the makeFun() function in the mosaic R package (for piecewise functions) and the curve() R function; for(iii) you might use the D()function in the stats library
 
 ## compute the median
+
 ```{r}
 F_inv = inverse(F, lower=0, upper=infinite)
 F_inv(0.5)
 ```
 
 # Part B
-Consider theCustomerCare.csvdata set on rating about a new product (columnsRatingpriceandRatingquality).  After considering the variableEducationas group variable
+
+Consider theCustomerCare.csvdata set on rating about a new product (columnsRatingpriceandRatingquality). After considering the variable Educationas group variable
+
+```{r}
+df = read.csv(file = 'CustomerCare.csv')
+
+```
 
 ## Perform a MANOVA test to determine if there are differences in the mean vectors ofthe ratings in the education level groups
+
 ```{r}
+
 ```
 
 ## Perform univariate ANOVA tests on each variable
+
 ```{r}
 ```
 
 ## Compare and comment on results
+
 ```{r}
+
 ```
 
 Hints: for (i) you might use themanova Rfunction; for (ii) you might use theaov()function
 
 # Part C
+
 ```{r}
+df = read.csv(file = 'CustomerCare.csv')
+
 ```
 
-Consider theCustomerCare.csvdata set on rating about a new product (columnRatingprice)
+### Consider the CustomerCare.csv dataset on rating about a new product (column Rating_price). Implement the classical bootstrap to estimate the (95%) confidence intervals of the population Pearson's correlation coefficient between rating and Age. Compare with the Fisher transform method. Implement an iterative procedure and a package procedure (for example using boot)
 
-## Implement the classical bootstrap to estimate the (95%) confidence intervals of the population Pearson’s correlation coefficient between rating andAge
 ```{r}
+dt = subset(df, select = c("Rating_price","Age"))
+N = length(dt[,1])
+X = df$Age
+Y = df$Rating_price
 ```
 
-
-## Compare with the Fisher transform method
 ```{r}
+## STEP BY STEP
+n_iter = 1000
+corrs = rep(NULL, n_iter)
+
+for (i in 1:n_iter){
+    indexes = as.matrix(sample(1:N, sqrt(N)), replace=TRUE)
+    corrs[i] = cor(X[indexes], Y[indexes])
+}
+
+boot_mu = mean(corrs)
+boot_std_err = sqrt((sum(corrs - boot_mu)^2)/(n_iter-1))
+
+boot_mu
+boot_std_err
+hist(corrs)
+
+```
+###The sampling distribution of Pearson\'s r is not normally distributed. Fisher developed a transformation now called "Fisher's z-transformation" that converts Pearson's r to the normally distributed variable z. The formula for the transformation is: $$z_r = tanh^{-1}(r) = \frac{1}{2}log\left ( \frac{1+r}{1-r}\right )$$
+
+```{r}
+## LIBRARY
+
+foo = function(data, indexes) {
+    return(cor(data[indexes,1],data[indexes,2]))
+}
+
+results = boot(dt, foo, R = n_iter, stype = 'i' )
+results
 ```
 
-## Compare with the Fisher transform method
 ```{r}
+zs = FisherZ(corrs)
+hist(zs)
 ```
 
-## Implement an iterative procedure and a package procedure (for exampleusingboot)
+```{r}
+est = ci(zs, confidence=0.95)
+mu_hat = est['Estimate']
+est
+FisherZInv(mu_hat)
+```
+
+```{r}
+corrs = seq(0, 1, 0.1)
+
+# mumble
+rc = t(sapply(corrs, CorCI, n=N))
+t = corrs*sqrt(N-2)/sqrt(1-corrs^2)
+p = (1-pt(t,N-2))/2
+
+zresults =  data.frame(r=corrs, z=FisherZ(corrs), lower=rc[,2], upper=rc[,3], t=t, p=p)
+round(zresults, 2)
+```
 
 ## Plot the confidence intervals to visually compare the results
+
+```{r}
+
+
+```
 
 Let Y be the Rating price and X the Age
 
 ## Compute the (95%) boostrap confidence interval for Y/X
 
+```{r}
+
+```
+
 ## Comment on results.
 
-NOTE: This part is similar to an example given in a previous class and should be intendedas an exercise in which you can freely add extra material on bootstrap. For example, you may extend that example including the use of other bootstrap R packages you may find.
+```{r}
+
+```
+
+NOTE: This part is similar to an example given in a previous class and should be intended as an exercise in which you can freely add extra material on bootstrap. For example, you may extend that example including the use of other bootstrap R packages you may find.
+
+
+```{r}
+# create a list of all installed packages
+ ip <- as.data.frame(installed.packages())
+ head(ip)
+# if you use MRO, make sure that no packages in this library will be removed
+ ip <- subset(ip, !grepl("MRO", ip$LibPath))
+# we don't want to remove base or recommended packages either\
+ ip <- ip[!(ip[,"Priority"] %in% c("base", "recommended")),]
+# determine the library where the packages are installed
+ path.lib <- unique(ip$LibPath)
+# create a vector with all the names of the packages you want to remove
+ pkgs.to.remove <- ip[,1]
+ head(pkgs.to.remove)
+# remove the packages
+ sapply(pkgs.to.remove, remove.packages, lib = path.lib)
+```
