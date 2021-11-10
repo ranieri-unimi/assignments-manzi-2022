@@ -1,5 +1,6 @@
 ```{r}
 setwd('//wsl.localhost/manzi/home/tosho/manzi')
+setwd('~/manzi')
 rmarkdown::render("assone.rmd", "html_document")
 ```
 
@@ -137,6 +138,7 @@ Y = df$Rating_price
 
 ```{r}
 ## STEP BY STEP
+
 n_iter = 1000
 corrs = rep(NULL, n_iter)
 
@@ -145,19 +147,14 @@ for (i in 1:n_iter){
     corrs[i] = cor(X[indexes], Y[indexes])
 }
 
-boot_mu = mean(corrs)
-boot_std_err = sqrt((sum(corrs - boot_mu)^2)/(n_iter-1))
-
-boot_mu
-boot_std_err
 hist(corrs)
-
+round(ci(corrs, confidence=0.95), 3)
 ```
-###The sampling distribution of Pearson\'s r is not normally distributed. Fisher developed a transformation now called "Fisher's z-transformation" that converts Pearson's r to the normally distributed variable z. The formula for the transformation is: $$z_r = tanh^{-1}(r) = \frac{1}{2}log\left ( \frac{1+r}{1-r}\right )$$
+### The sampling distribution of Pearson\'s r is not normally distributed. Fisher developed a transformation now called "Fisher's z-transformation" that converts Pearson's r to the normally distributed variable z. The formula for the transformation is:
+$$z_r = tanh^{-1}(r) = \frac{1}{2}log\left ( \frac{1+r}{1-r}\right )$$
 
 ```{r}
 ## LIBRARY
-
 foo = function(data, indexes) {
     return(cor(data[indexes,1],data[indexes,2]))
 }
@@ -173,9 +170,7 @@ hist(zs)
 
 ```{r}
 est = ci(zs, confidence=0.95)
-mu_hat = est['Estimate']
-est
-FisherZInv(mu_hat)
+round(FisherZInv(est), 3)
 ```
 
 ```{r}
