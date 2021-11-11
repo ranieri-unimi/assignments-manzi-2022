@@ -1,111 +1,211 @@
+# Assignment 1 - AMS
+
 ```{r}
-rmarkdown::render("manzi/assone.rmd", "html_document")
-print('hola')
-#install.packages("knitr")
-#install.packages("rmarkdown")
+rmarkdown::render("assone.rmd", "html_document")
 ```
 
-# Part A
 ```{r}
-#install.packages('Ryacas')
+install.packages('DescTools')
+install.packages('GoFKernel')
+install.packages('Ryacas')
+install.packages('boot')
+install.packages('gmodels') 
+install.packages('knitr')
+install.packages('mosaic')
+install.packages('mosaicCalc')
+install.packages('rmarkdown')
+install.packages('stats')
+install.packages('confintr')
+
+```
+
+```{r}
+library(DescTools)
+library(GoFKernel)
 library(Ryacas)
-#install.packages('mosaic')
+library(boot)
+library(gmodels)
+library(knitr)
 library(mosaic)
-#install.packages('stats')
+library(mosaicCalc)
+library(rmarkdown)
 library(stats)
+library(confintr)
 
+infinite = 75
 ```
 
-## Check whether it is a proper CDF using the limit properties only.
+## Part A
+
+```{r}
+F = function(x) (1 - (1/exp((x^2)/8)))
+```
+
+### Check whether it is a proper CDF using the limit properties only.
 
 ```{r}
 x = ysym("x")
-lim(1 - (1/exp((x^2)/8)), x, +Inf)
+lim(F(x), x, +Inf)
 ```
-
 ## Plot it
-```{r}
-f = makeFun(1 - (1/exp((x^2)/8)) ~ x)
-plotFun( f(x) ~ x, xlim = c(0, 10) )
 
+```{r}
+F_mos = makeFun(F(x) ~ x)
+plotFun( F_mos(x) ~ x, xlim = c(-2, 10) )
+# TODO flaf 2nd part
 ```
 
 ## plot its density for X > 0
 
 ```{r}
-f = function(x) (1 - exp(1/exp((x^2)/8)))
-g = function(x) {}
+f = function(x) {}
+body(f) = D(body(F), 'x')
+curve(f, 0, 10, ylab = "PDF(x)")
 ```
-
-```{r}
-body(g) = D(body(f), 'x')
-curve(g, 0, 10, ylab = "PDF(x)")
-```
-
 
 ## compute P(0 < X ≤ 2.3)
-```{r}
 
+```{r}
+F(2.3) - F(0)
 ```
 
 ## compute E(X)
+
+As we know E(X) = INTEGER(1 - CDF(X))
+
 ```{r}
+M = antiD((1-F(x)) ~ x)
+mu = M(+Inf) - M(0)
+mu
 ```
 
 ## compute VAR(X)
-```{r}
-```
 
-Hints:  for (i) you might use the Ryacas Rlibrary;  for (ii) you might use themakeFun()function in themosaic Rpackage (for piecewise functions) and thecurve() Rfunction; for(iii) you might use theD()function in the stats library
+```{r}
+MM = antiD((x*f(x)*(x)) ~ x)
+ex2 = MM(infinite) - MM(0)
+ex2 - (mu*mu)
+```
 
 ## compute the median
+
 ```{r}
+F_inv = inverse(F, lower=0, upper=infinite)
+F_inv(0.5)
 ```
 
-# Part B
-Consider theCustomerCare.csvdata set on rating about a new product (columnsRatingpriceandRatingquality).  After considering the variableEducationas group variable
+## Part B
+
+```{r}
+df = read.csv(file = 'CustomerCare.csv')
+dt = subset(df , columns=c('Education','Rating_price','Rating_quality'))
+```
+Consider the CustomerCare.csv dataset on rating about a new product (columns Rating_price and Rating_quality). After considering the variable Education as group variable:
 
 ## Perform a MANOVA test to determine if there are differences in the mean vectors ofthe ratings in the education level groups
+
 ```{r}
+
 ```
 
 ## Perform univariate ANOVA tests on each variable
+
 ```{r}
 ```
 
 ## Compare and comment on results
+
 ```{r}
+
 ```
 
-Hints: for (i) you might use themanova Rfunction; for (ii) you might use theaov()function
+Hints: for (i) you might use the manova R function; for (ii) you might use the aov()function
 
-# Part C
+## Part C
+
 ```{r}
+df = read.csv(file = 'CustomerCare.csv')
+
 ```
 
-Consider theCustomerCare.csvdata set on rating about a new product (columnRatingprice)
+### Consider the CustomerCare.csv dataset on rating about a new product (column Rating_price). Implement the classical bootstrap to estimate the (95%) confidence intervals of the population Pearson's correlation coefficient between rating and Age. Compare with the Fisher transform method. Implement an iterative procedure and a package procedure (for example using boot)
 
-## Implement the classical bootstrap to estimate the (95%) confidence intervals of the popu-lation Pearson’s correlation coefficient between rating andAge
 ```{r}
+dt = subset(df, select = c("Rating_price","Age"))
+N = length(dt[,1])
+X = df$Age
+Y = df$Rating_price
 ```
 
-
-## Compare with the Fishertransform method
 ```{r}
+## iterative procedure
+
+n_iter = 1000
+corrs = rep(NULL, n_iter)
+
+for (i in 1:n_iter){
+    indexes = as.matrix(sample(1:N, sqrt(N)), replace=TRUE)
+    corrs[i] = cor(X[indexes], Y[indexes])
+}
+
+hist(corrs)
+sbs = round(ci(corrs, confidence=0.95), 3)
+sbs
+```
+### The sampling distribution of Pearson\'s r is not normally distributed. Fisher developed a transformation now called "Fisher's z-transformation" that converts Pearson's r to the normally distributed variable z. The formula for the transformation is:
+$$z_r = tanh^{-1}(r) = \frac{1}{2}log\left ( \frac{1+r}{1-r}\right )$$
+
+```{r}
+## LIBRARY
+foo = function(data, indexes) {
+    return(cor(data[indexes,1],data[indexes,2]))
+}
+
+results = boot(dt, foo, R = n_iter, stype = 'i' )
+results
 ```
 
-## Compare with the Fishertransform method
 ```{r}
+tmp1 = ci_cor(X, Y, method = "pearson", type = "normal")
+zs = FisherZ(cor(X,Y))
+zs
+
+tmp2 = ci_cor(X, Y, method = "pearson", type = "bootstrap")
 ```
 
-## Implement an iterative procedure and a package procedure (for exampleusingboot)
+```{r}
 
-## Plot the confidence intervals to visually compare the results
+est = ci(zs, confidence=0.95)
+pkg = round(FisherZInv(est), 3)
+pkg
+```
 
-Let Y be the Rating price and X the Age
+### Plot the confidence intervals to visually compare the results
 
-## Compute the (95%) boostrap confidence interval for Y/X
+```{r}
+data = data.frame(
+    x = c(1:2),
+    y = c(sbs['Estimate'], pkg['Estimate']),
+    lower = c(sbs['CI lower'], pkg['CI lower']),
+    upper = c(sbs['CI upper'], pkg['CI upper'])
+)
 
-## Comment on results.
+#install.packages("plotrix")
+library("plotrix")
 
-NOTE: This part is similar to an example given in a previous class and should be intendedas an exercise in which you can freely add extra material on bootstrap. For example, you may extend that example including the use of other bootstrap R packages you may find.
+plotCI(x = data$x,
+       y = data$y,
+       li = data$lower,
+       ui = data$upper)
+```
+
+### Compute the (95%) boostrap confidence interval for Y/X
+
+```{r}
+# TODO
+```
+
+### Comment on results.
+
+
+NOTE: you may extend that example including the use of other bootstrap R packages you may find.
