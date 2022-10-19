@@ -1,0 +1,352 @@
+---
+title: "Assignment 1"
+output: pdf_document
+---
+
+*Part b*
+
+For this second task a two-way Manova and two Anova tests are going to be performed in order to perform a multivariate and two univariate analysis of variance.
+The aim is to test if the variables regarding the ratings given to price and to quality of products by the customers are affected by the level of education of the customers.
+
+
+```{r}
+setwd("~/Desktop/advanced multivariate statistics/assignment 1")
+
+dataset = read.csv("CustomerCare.csv", sep = ";")
+
+dataset
+```
+
+Given that the Manova and Anova test require multivariate normality, a Shapiro-Wilk test is performed before proceeding with the analysis.
+
+
+```{r}
+
+# check for normality
+
+sub_data <- cbind(dataset$Rating_price, dataset$Rating_quality, dataset$Education)
+data.frame(sub_data)
+
+shapiro.test(sub_data)
+
+```
+
+
+
+This tests results in a p-value < 0.05, multivariate normality is confirmed. 
+The Manova and Anova tests can be performed.
+
+
+```{r}
+# TWO WAY MANOVA
+
+price <- dataset$Rating_price
+quality <- dataset$Rating_quality
+dep_variables <- cbind(price, quality)
+
+# MANOVA test
+res.man <- manova(dep_variables ~ Education, data = dataset)
+summary(res.man)
+```
+
+Given a large p-value >0.05, it cannot be inferred that Education level has an influence on the ratings that customers give to the price and to the quality of the new product.
+
+
+```{r}
+#ANOVA PRICE
+
+# Compute the analysis of variance
+res.aov <- aov(Rating_price ~ Education, data = dataset)
+# Summary of the analysis
+summary(res.aov)
+```
+
+
+```{r}
+#ANOVA RATING
+
+# Compute the analysis of variance
+res.aov <- aov(Rating_quality ~ Education, data = dataset)
+# Summary of the analysis
+summary(res.aov)
+```
+
+
+....
+
+
+*Part c*
+
+**PEARSON**
+
+```{r}
+
+set.seed(42)
+
+# bootstrap by hand
+
+price <- dataset$Rating_price
+age <- dataset$Age
+
+N=length(dataset[,1])
+sample_boot <- cbind(price, age)
+data.frame(sample_boot)
+
+B=500
+
+boot_reps <- vector ("numeric", length = B)
+
+for (b in 1:B) {
+  boot_indexes <-as.matrix(sample(1:N, 100), replace=TRUE)
+  price_values <- price[boot_indexes]
+  age_values <- age[boot_indexes]
+  cor.test(price_values, age_values, alternative = "two.sided", method = "pearson", exact = NULL, conf.level = 0.95, continuity = FALSE)
+r <- cor.test(price_values,age_values)$estimate
+  boot_reps[b]<-r
+}
+
+mean_bootpearson<-mean(boot_reps)
+se_boot<-(sum((boot_reps-mean_bootpearson)^2)/(B-1))^0.5
+se_boot
+mu_1 <- mean_bootpearson
+
+upper_1 <- mean_bootpearson + (0.95)*(sd(boot_reps))/sqrt(B)
+lower_1 <- mean_bootpearson - (0.95)*(sd(boot_reps))/sqrt(B)
+
+conf_1 <- c(lower_1, mu_1, upper_1)
+
+conf_1
+
+```
+
+
+
+```{r}
+
+# bootstrap with library
+
+library(boot)
+
+B=500
+
+data_boot <- subset(dataset, select = c("Rating_price", "Age"))
+
+get.corr<-function(data,indices){
+  data <- data[indices,]
+  price <- data[,1]
+  age <- data[,2]
+  cor.test(price, age, alternative = "two.sided", method = "pearson", exact = NULL, conf.level = 0.95, continuity = FALSE)
+r <- cor.test(price, age)$estimate
+  return(r)
+}
+
+boot.output<-boot(data_boot,get.corr,R=B, stype = "i")
+boot.output
+
+mu_2 <- boot.output$t0
+
+std <- boot.output$t
+
+
+
+upper_2 <- mu_2 + (0.95)*(sd(std))/sqrt(B)
+lower_2 <- mu_2 - (0.95)*(sd(std))/sqrt(B)
+
+conf_2 <- c(lower_2, mu_2, upper_2)
+
+conf_2
+
+
+
+ 
+
+```
+
+
+
+**FISHER**
+
+
+
+```{r}
+
+library(DescTools)
+
+# bootstrap by hand
+
+price <- dataset$Rating_price
+age <- dataset$Age
+
+N=length(dataset[,1])
+sample_boot <- cbind(price, age)
+data.frame(sample_boot)
+
+B=500
+
+boot_reps <- vector ("numeric", length = B)
+
+for (b in 1:B) {
+  boot_indexes <-as.matrix(sample(1:N, 100), replace=TRUE)
+  price_values <- price[boot_indexes]
+  age_values <- age[boot_indexes]
+  cor.test(price_values, age_values, alternative = "two.sided", method = "pearson", exact = NULL, conf.level = 0.95, continuity = FALSE)
+r <- cor.test(price_values,age_values)$estimate
+z <- FisherZ(r)
+
+  boot_reps[b]<-z
+}
+
+mean_bootpearson<-mean(boot_reps)
+se_boot<-(sum((boot_reps-mean_bootpearson)^2)/(B-1))^0.5
+se_boot
+mu_3 <- mean_bootpearson
+
+upper_3 <- mu_3 + (1.96)*(1/sqrt(N-3))
+lower_3 <- mu_3 - (1.96)*(1/sqrt(N-3))
+
+conf_3 <- c(lower_3, mu_3, upper_3)
+FisherZInv(conf_3)
+
+
+
+
+
+
+```
+```{r}
+
+#bootsrtap with library
+
+library(boot)
+
+B=500
+
+data_boot <- subset(dataset, select = c("Rating_price", "Age"))
+
+get.corr<-function(data,indices){
+  data <- data[indices,]
+  price <- data[,1]
+  age <- data[,2]
+  cor.test(price, age, alternative = "two.sided", method = "pearson", exact = NULL, conf.level = 0.95, continuity = FALSE)
+r <- cor.test(price, age)$estimate
+z <- FisherZ(r)
+  return(z)
+}
+
+boot.output<-boot(data_boot,get.corr,R=B, stype = "i")
+boot.output
+
+mu_4 <- boot.output$t0
+
+upper_4 <- mu_4 + (1.96)*(1/sqrt(N-3))
+lower_4 <- mu_4 - (1.96)*(1/sqrt(N-3))
+
+
+
+conf_4 <- c(lower_4, mu_4, upper_4)
+FisherZInv(conf_4)
+
+
+```
+
+```{r}
+library(DescTools)
+
+price <- dataset$Rating_price
+age <- dataset$Age
+
+cor.test(price, age, alternative = "two.sided", method = "pearson", exact = NULL, conf.level = 0.95, continuity = FALSE)
+r <- cor.test(price,age)$estimate
+mu_5 <- FisherZ(r)
+
+upper_5 <- mu_5 + (1.96)*(1/sqrt(N-3))
+lower_5 <- mu_5 - (1.96)*(1/sqrt(N-3))
+
+conf_5 <- c(lower_5, mu_5, upper_5)
+FisherZInv(conf_5)
+```
+
+
+
+```{r}
+
+#install.packages("plotrix")
+library("plotrix")
+
+data <- data.frame(x=1:5,
+                   y= c(mu_1, mu_2, mu_3, mu_4, mu_5),
+                   lower = c(lower_1, lower_2, lower_3, lower_4, lower_5),
+                   upper = c(upper_1, upper_2, upper_3, upper_4, upper_5))
+
+plotCI(x=data$x,
+       y=data$y,
+       li=data$lower,
+       ui=data$upper)
+
+
+```
+```{r}
+print(conf_1)
+print(conf_2)
+print(conf_3)
+print(conf_4)
+print(conf_5)
+```
+
+conclusione: bootstrap è meglio di fisher 
+rating price e age sono very weakly positively correlated
+
+
+
+
+
+
+
+```{r}
+Y <- dataset$Rating_price
+X <- dataset$Rating_quality
+
+library(boot)
+
+B=500
+
+data_boot <- subset(dataset, select = c("Rating_quality", "Rating_price"))
+
+get.ratio<-function(data,indices){
+  data <- data[indices,]
+  quality <- data[,1]
+  price <- data[,2]
+  q = sum(price)/sum(quality)
+  return(q)
+}
+
+boot.output<-boot(data_boot,get.ratio,R=B, stype = "i")
+boot.output
+
+
+mu <- boot.output$t0
+
+std <- boot.output$t
+
+
+
+upper_bound <- mu + (0.95)*(sd(std))/sqrt(B)
+lower_bound <- mu - (0.95)*(sd(std))/sqrt(B)
+
+conf_6 <- c(lower_bound, mu, upper_bound)
+
+conf_6
+
+
+
+
+```
+rapporto tra due somme non normale
+
+Bootstrap per normalizzare
+
+conf int per dimostrare che il ratio sia >1 
+
+People tend to give more positive ratings to price than to quality.
+
+

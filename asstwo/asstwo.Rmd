@@ -1,0 +1,161 @@
+---
+title: "Assignment 2"
+author: "Ranieri Martin 967158"
+date: "December 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part A
+
+Consider the Disability.csv data set on the distribution of the type of disability (limiting, non-limiting, none) according to age.
+
+```{r}
+ds = read.csv(file = 'Disability.csv', sep=';')
+```
+
+### Create a two-way contingency table using standard R tools
+```{r}
+t = table(ds)
+t
+```
+
+### Use the output above as input for the CTAShiny() app
+```{r}
+library(CTAShiny)
+#CTAShiny()
+```
+
+### Write a few lines of comments on the analysis using the outputs (also visual) from the CTAShiny() app
+
+The association plot `cta-AssociationPlot.png` visualize the raw residuals by the area of rectangles (height as the corresponding Pearson residual, and width as the square root of the expected counts), and the sign of the residual by the rectangle’s color.
+Given that, higher Pearson residuals lead us to reject the null hypothesis that features are independently distributed.
+As we can see `Age` is highly dependent to having a disability (`limiting` or not), that's an evidence that a lower age (`17-34`)is correlated to a lower chance to have a disability. Pearson's Chi-squared test will enforce this hypothesis
+
+### What happens if we drop the ’None’ category from the variable Disability?
+```{r}
+dsp = ds[ds$Disability != 'None', ]
+chisq.test(dsp$ï..Age, dsp$Disability)
+```
+
+We can transpose the same concept explained before: looking at the plot `cta-AssociationPlot-nonone.png`, younger age (17-34 yo) seems negative correlated with having a limiting disability, but we cannot provide the same inferences for old people (35-74 yo), except for the 45-54 years old range.
+
+...
+
+# Part B
+
+Consider the `Yogurt.csv` data set on nutritional facts about fat-free and natural yogurts
+```{r}
+yg = read.csv(file = 'Yogurt.csv', sep=';')
+yg = yg[yg$ï..Brand != 'Vitasnella', ]
+N = length(yg[,1])
+```
+
+
+### After scaling the variables, compute the Euclidean distance matrix
+```{r}
+dists = matrix(1:(N*N), nrow = N, ncol = N)
+euc_dist = function(a, b) sqrt(sum((a - b)^2))
+
+# scaling
+for(i in 2:length(yg)){
+  yg[i] = scale(yg[i])
+}
+
+# distance matrix
+for(i in 1:N){
+  for(j in 1:N){
+    dists[i,j] = euc_dist(yg[i,2:6], yg[j,2:6])
+  }
+}
+dists
+```
+
+### Use the cmdscale() function to perform a multidimensional scaling on the data and save the coordinates of the first two principal coordinates
+```{r}
+coord = cmdscale(dists, k = 2)
+df = as.data.frame(coord)
+df['brand'] = yg$ï..Brand
+df
+
+```
+
+### Plot the yogurts labels using the coordinates found above. 
+```{r}
+library(ggrepel)
+
+sp = ggplot(df, aes(x = V1, y = V2)) +
+    geom_point()
+
+sp +
+  geom_text_repel(aes(label = brand), size = 3)
+   
+sp +
+  geom_label_repel(aes(label = brand), size = 3)
+```
+
+### Comment on the results
+
+A previous computation was made including `Vitasnella` brand. It provided inconclusive results due to the fact that its record report wrong scaled values.
+That record was removed and the multidimensional scaling was performed again.
+`V1` X-axis seems to be related to how much raw milk has been refined (positive values) or preserved keeping original nutrients like fat (negative ones).
+`V2` Y-axis seems to be related to the density of nutrients (positive) or their lacks (negative)
+
+No clustering techniques was applied, data seems generated from a single process with a (skew) bivariate normal distribution.
+
+
+## Part C
+```{r include=FALSE}
+library(tidyverse)
+library(CCA)
+theme_set(theme_bw(16))
+```
+
+Consider the dataset from the Health Survey for England (HSE) 2019 and related documentation in the zip file `HSE2019.zip`
+
+### Try to work out two suitable subsets of variables to perform the CCA after pre-processing the file
+
+
+See *`cleaner.py`* script
+
+
+```{r}
+hse = read.csv(file = 'hse-clean.csv')
+for(i in 1:length(hse)){
+  hse[i] = scale(hse[i])
+}
+```
+
+### Perform a similar analysis as in the above example on the HSE dataset choosing the right variables for canonical correlation analysis
+```{r}
+X = hse[,c('SYS1OM', 'DIAS1OM', 'PULS1OM', 'MAP1OM')]
+Y = hse[,c('HtVal', 'WtVal', 'wstval', 'hipval', 'whval', 'BMIVal')]
+
+res = cc(X,Y)
+
+#cc_results$xcoef
+#cc_results$ycoef
+```
+
+```{r}
+barplot(res$cor, xlab = "Dimension", ylab = "Canonical correlations", ylim = c(0,1))
+```
+
+```{r}
+plt.cc(res, 1, 2, var.label = TRUE)
+
+```
+
+### Motivate this choice
+The first subset includes cardio measurements like pressures and heartbeat rate.
+The second subset includes external morphological measurements like height and weight.
+This canonical correlation analysis has been design to prove that there are common hidden variables behind external body form and internal body performance.
+At the first time this analysis has been computed with a full set of the interested variables.
+Sadly eigenvalues cannot be computed by the library because some column report values too close.
+A smaller subset has been chosen for both features group and finally the canonical correlation was applied.
+
+
+This analysis finds out that Waist/Hip ratio `WhVal` (and also Waist measure `wstval` but that's trivial while looking at the former) is highly related to internal body measure, setting apart mainstream features like `BMIVal` Body Mass Index.
